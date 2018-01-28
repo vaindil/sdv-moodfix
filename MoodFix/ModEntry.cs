@@ -20,11 +20,11 @@ namespace MoodFix
             if (!Game1.player.professions.Contains(2) && !Game1.player.professions.Contains(3))
             {
                 Monitor.Log("Profession not found, will continue to check");
-                GameEvents.OneSecondTick += Initialize;
+                TimeEvents.AfterDayStarted += Initialize;
                 return;
             }
 
-            GameEvents.OneSecondTick -= Initialize;
+            TimeEvents.AfterDayStarted -= Initialize;
 
             foreach (var animal in Game1.getFarm().getAllFarmAnimals())
             {
