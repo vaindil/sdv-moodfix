@@ -8,30 +8,28 @@ namespace MoodFix
 {
     public class ModEntry : Mod
     {
-        private List<AnimalWrapper> _animals = new List<AnimalWrapper>();
+        private readonly List<AnimalWrapper> _animals = new List<AnimalWrapper>();
+        private bool _hasProfession;
 
         public override void Entry(IModHelper helper)
         {
+            TimeEvents.AfterDayStarted += CheckPlayerProfessions;
             SaveEvents.AfterLoad += Initialize;
         }
 
         private void Initialize(object sender, EventArgs e)
         {
-            if (!Game1.player.professions.Contains(2) && !Game1.player.professions.Contains(3))
-            {
-                Monitor.Log("Profession not found, will continue to check");
-                TimeEvents.AfterDayStarted += Initialize;
-                return;
-            }
-
-            TimeEvents.AfterDayStarted -= Initialize;
-
             foreach (var animal in Game1.getFarm().getAllFarmAnimals())
             {
                 _animals.Add(new AnimalWrapper(animal));
             }
 
             GameEvents.QuarterSecondTick += CheckAnimalHappiness;
+        }
+
+        private void CheckPlayerProfessions(object sender, EventArgs e)
+        {
+            _hasProfession = Game1.player.professions.Contains(2) || Game1.player.professions.Contains(3);
         }
 
         private void CheckAnimalHappiness(object sender, EventArgs e)
@@ -43,21 +41,43 @@ namespace MoodFix
             for (var i = animals.Count - 1; i >= 0; i--)
             {
                 var animal = animals[i];
+
+                // Check if the animal is already being tracked
                 var existing = _animals.Find(a => a.Animal == animal);
+
                 if (existing != null)
                 {
-                    if (existing.CurrentHappiness != animal.happiness && existing.WasOverflown(animal.happiness))
+                    // If the happiness didn't change then there's no reason to run the following calculations
+                    if (existing.CurrentHappiness != animal.happiness)
                     {
-                        animal.happiness = 255;
-                        existing.CurrentHappiness = 255;
-                        Monitor.Log($"Happiness overflow detected: {animal.type} {animal.displayName}, setting to 255");
+                        // These are used for the following check to fix bug where animal happiness drops after 6pm
+                        var happinessChange = existing.CurrentHappiness - animal.happiness;
+                        var isAnimalIndoors = ((AnimalHouse)animal.home.indoors).animals.ContainsValue(animal);
+
+                        // If the time is 6pm or later, the animal is indoors, and the happiness change was less than 10,
+                        // this is the bug. Just revert the drop to correct the problem.
+                        if (Game1.timeOfDay >= 1800 && isAnimalIndoors && happinessChange > 0 && happinessChange <= 10)
+                        {
+                            // Purposely commented out, this would be a bit too much spam
+                            // Monitor.Log($"Fixing animal happiness: {animal.name}, from {animal.happiness} to {existing.CurrentHappiness}");
+
+                            animal.happiness = (byte)existing.CurrentHappiness;
+                        }
+                        // Did the happiness change because the animal was petted, and did that cause an overflow?
+                        else if (_hasProfession && existing.WasOverflown(animal.happiness))
+                        {
+                            animal.happiness = 255;
+                            existing.CurrentHappiness = 255;
+                            Monitor.Log($"Happiness overflow detected: {animal.type} {animal.displayName}, setting to 255");
+                        }
                     }
 
+                    // Animal is taken care of so remove it from the list
                     animals.RemoveAt(i);
                 }
             }
 
-            // These animals are new to the party
+            // These animals are new to the party (they weren't removed by the previous loop)
             foreach (var animal in animals)
             {
                 _animals.Add(new AnimalWrapper(animal));
@@ -80,10 +100,7 @@ namespace MoodFix
 
         public bool WasOverflown(int newHappiness)
         {
-            if (newHappiness == (CurrentHappiness + HappinessChangeWhenPetted) - 256)
-                return true;
-
-            return false;
+            return newHappiness == CurrentHappiness + HappinessChangeWhenPetted - 256;
         }
 
         /// <summary>
