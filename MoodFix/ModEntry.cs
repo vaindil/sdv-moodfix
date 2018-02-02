@@ -15,6 +15,7 @@ namespace MoodFix
         {
             TimeEvents.AfterDayStarted += CheckPlayerProfessions;
             SaveEvents.AfterLoad += Initialize;
+            SaveEvents.AfterReturnToTitle += KillItWithFire;
         }
 
         private void Initialize(object sender, EventArgs e)
@@ -83,6 +84,11 @@ namespace MoodFix
                 _animals.Add(new AnimalWrapper(animal));
                 Monitor.Log($"New animal detected: {animal.type} {animal.displayName}");
             }
+        }
+
+        private void KillItWithFire(object sender, EventArgs e)
+        {
+            GameEvents.QuarterSecondTick -= CheckAnimalHappiness;
         }
     }
 
