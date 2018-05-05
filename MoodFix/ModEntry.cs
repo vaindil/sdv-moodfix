@@ -49,11 +49,11 @@ namespace MoodFix
                 if (existing != null)
                 {
                     // If the happiness didn't change then there's no reason to run the following calculations
-                    if (existing.CurrentHappiness != animal.happiness)
+                    if (existing.CurrentHappiness != animal.happiness.Value)
                     {
                         // These are used for the following check to fix bug where animal happiness drops after 6pm
-                        var happinessChange = existing.CurrentHappiness - animal.happiness;
-                        var isAnimalIndoors = ((AnimalHouse)animal.home.indoors).animals.ContainsValue(animal);
+                        var happinessChange = existing.CurrentHappiness - animal.happiness.Value;
+                        var isAnimalIndoors = ((AnimalHouse)animal.home.indoors.Value).animals.TryGetValue(animal.myID.Value, out _);
 
                         // If the time is 6pm or later, the animal is indoors, and the happiness change was less than 10,
                         // this is the bug. Just revert the drop to correct the problem.
@@ -62,12 +62,12 @@ namespace MoodFix
                             // Purposely commented out, this would be a bit too much spam
                             // Monitor.Log($"Fixing animal happiness: {animal.name}, from {animal.happiness} to {existing.CurrentHappiness}");
 
-                            animal.happiness = (byte)existing.CurrentHappiness;
+                            animal.happiness.Set((byte)existing.CurrentHappiness);
                         }
                         // Did the happiness change because the animal was petted, and did that cause an overflow?
-                        else if (_hasProfession && existing.WasOverflown(animal.happiness))
+                        else if (_hasProfession && existing.WasOverflown(animal.happiness.Value))
                         {
-                            animal.happiness = 255;
+                            animal.happiness.Set(255);
                             existing.CurrentHappiness = 255;
                             Monitor.Log($"Happiness overflow detected: {animal.type} {animal.displayName}, setting to 255");
                         }
@@ -100,8 +100,8 @@ namespace MoodFix
         public AnimalWrapper(FarmAnimal animal)
         {
             Animal = animal;
-            CurrentHappiness = animal.happiness;
-            HappinessChangeWhenPetted = (40 - animal.happinessDrain) * 2;
+            CurrentHappiness = animal.happiness.Value;
+            HappinessChangeWhenPetted = (40 - animal.happinessDrain.Value) * 2;
         }
 
         public bool WasOverflown(int newHappiness)
