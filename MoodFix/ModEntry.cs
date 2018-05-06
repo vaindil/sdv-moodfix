@@ -62,12 +62,12 @@ namespace MoodFix
                             // Purposely commented out, this would be a bit too much spam
                             // Monitor.Log($"Fixing animal happiness: {animal.name}, from {animal.happiness} to {existing.CurrentHappiness}");
 
-                            animal.happiness.Set((byte)existing.CurrentHappiness);
+                            animal.happiness.Value = (byte)existing.CurrentHappiness;
                         }
                         // Did the happiness change because the animal was petted, and did that cause an overflow?
                         else if (_hasProfession && existing.WasOverflown(animal.happiness.Value))
                         {
-                            animal.happiness.Set(255);
+                            animal.happiness.Value = 255;
                             existing.CurrentHappiness = 255;
                             Monitor.Log($"Happiness overflow detected: {animal.type} {animal.displayName}, setting to 255");
                         }
