@@ -18,6 +18,10 @@ namespace MoodFix
 
         private void Initialize(object sender, EventArgs e)
         {
+            // Farmhands can't use this mod, so just disable it.
+            if (!Game1.player.IsMainPlayer)
+                return;
+
             foreach (var animal in Game1.getFarm().getAllFarmAnimals())
             {
                 _animals.Add(new AnimalWrapper(animal));
@@ -53,7 +57,7 @@ namespace MoodFix
                         if (Game1.timeOfDay >= 1800 && isAnimalIndoors && happinessChange > 0 && happinessChange <= 10)
                         {
                             // Purposely commented out, this would be a bit too much spam
-                            Monitor.Log($"Fixing animal happiness: {animal.Name}, from {animal.happiness} to {existing.CurrentHappiness}");
+                            // Monitor.Log($"Fixing animal happiness: {animal.Name}, from {animal.happiness} to {existing.CurrentHappiness}");
 
                             animal.happiness.Value = (byte)existing.CurrentHappiness;
                         }
