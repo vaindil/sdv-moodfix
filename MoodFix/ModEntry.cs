@@ -53,9 +53,14 @@ namespace MoodFix
                         if (Game1.timeOfDay >= 1800 && isAnimalIndoors && happinessChange > 0 && happinessChange <= 10)
                         {
                             // Purposely commented out, this would be a bit too much spam
-                            // Monitor.Log($"Fixing animal happiness: {animal.name}, from {animal.happiness} to {existing.CurrentHappiness}");
+                            Monitor.Log($"Fixing animal happiness: {animal.Name}, from {animal.happiness} to {existing.CurrentHappiness}");
 
                             animal.happiness.Value = (byte)existing.CurrentHappiness;
+                        }
+                        // This wasn't because of the bug, so update the internal value.
+                        else
+                        {
+                            existing.CurrentHappiness = animal.happiness.Value;
                         }
                     }
 
