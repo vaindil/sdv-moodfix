@@ -9,9 +9,11 @@ namespace MoodFix
     public class ModEntry : Mod
     {
         private readonly List<AnimalWrapper> _animals = new List<AnimalWrapper>();
+        private bool _hasProfession;
 
         public override void Entry(IModHelper helper)
         {
+            TimeEvents.AfterDayStarted += CheckPlayerProfessions;
             SaveEvents.AfterLoad += Initialize;
             SaveEvents.AfterReturnToTitle += KillItWithFire;
         }
@@ -28,6 +30,11 @@ namespace MoodFix
             }
 
             GameEvents.QuarterSecondTick += CheckAnimalHappiness;
+        }
+
+        private void CheckPlayerProfessions(object sender, EventArgs e)
+        {
+            _hasProfession = Game1.player.professions.Contains(2) || Game1.player.professions.Contains(3);
         }
 
         private void CheckAnimalHappiness(object sender, EventArgs e)
@@ -61,7 +68,14 @@ namespace MoodFix
 
                             animal.happiness.Value = (byte)existing.CurrentHappiness;
                         }
-                        // This wasn't because of the bug, so update the internal value.
+                        // Did the happiness change because the animal was petted, and did that cause an overflow?
+                        else if (_hasProfession && existing.WasOverflown(animal.happiness.Value))
+                        {
+                            animal.happiness.Value = 255;
+                            existing.CurrentHappiness = 255;
+                            Monitor.Log($"Happiness overflow detected: {animal.type} {animal.displayName}, setting to 255");
+                        }
+                        // This wasn't because of a bug, so update the internal value.
                         else
                         {
                             existing.CurrentHappiness = animal.happiness.Value;
@@ -96,6 +110,12 @@ namespace MoodFix
         {
             Animal = animal;
             CurrentHappiness = animal.happiness.Value;
+            HappinessChangeWhenPetted = (40 - animal.happinessDrain.Value) * 2;
+        }
+
+        public bool WasOverflown(int newHappiness)
+        {
+            return newHappiness == CurrentHappiness + HappinessChangeWhenPetted - 256;
         }
 
         /// <summary>
@@ -107,5 +127,10 @@ namespace MoodFix
         /// The current happiness of the animal to compare against when the value changes
         /// </summary>
         public int CurrentHappiness { get; set; }
+
+        /// <summary>
+        /// The amount the animal's happiness will change when petted
+        /// </summary>
+        public int HappinessChangeWhenPetted { get; set; }
     }
 }
